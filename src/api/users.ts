@@ -1,9 +1,11 @@
 import express from "express";
 
 import type { CacheStats } from "../cache/lru-cache.js";
+import type { QueueStats } from "../queue/async-queue.js";
 import type ErrorResponse from "../interfaces/error-response.js";
 
 import LRUCache from "../cache/lru-cache.js";
+import { createQueue } from "../queue/async-queue.js";
 import { createRateLimiter } from "../middleware/rate-limiter.js";
 
 const router = express.Router();
@@ -36,6 +38,14 @@ const mockUsers: Record<number, User> = {
 // LRU Cache with 100 capacity and 60 second TTL
 const userCache = new LRUCache<User>(100, 60);
 
+// Async Queue with 5 concurrent requests and deduplication
+const databaseQueue = createQueue<User | null>({
+  concurrency: 5,
+  maxRetries: 3,
+  retryDelay: 1000,
+  deduplication: true,
+});
+
 // Simulate database call with 200ms delay
 function simulateDatabaseCall(userId: number): Promise<User | null> {
   return new Promise((resolve) => {
@@ -49,6 +59,12 @@ function simulateDatabaseCall(userId: number): Promise<User | null> {
 // GET /users/cache/stats - Get cache statistics
 router.get<object, CacheStats>("/cache/stats", (req, res) => {
   const stats = userCache.getStats();
+  res.json(stats);
+});
+
+// GET /users/queue/stats - Get queue statistics
+router.get<object, QueueStats>("/queue/stats", (req, res) => {
+  const stats = databaseQueue.getStats();
   res.json(stats);
 });
 
@@ -73,8 +89,12 @@ router.get<{ id: string }, User | ErrorResponse>("/:id", async (req, res) => {
     return;
   }
 
-  // Simulate database call
-  const user = await simulateDatabaseCall(userId);
+  // Enqueue database request (with automatic deduplication)
+  // Multiple simultaneous requests for the same user will share the result
+  const user = await databaseQueue.enqueue(
+    cacheKey,
+    () => simulateDatabaseCall(userId),
+  );
 
   if (!user) {
     res.status(404).json({
