@@ -4,8 +4,20 @@ import type { CacheStats } from "../cache/lru-cache.js";
 import type ErrorResponse from "../interfaces/error-response.js";
 
 import LRUCache from "../cache/lru-cache.js";
+import { createRateLimiter } from "../middleware/rate-limiter.js";
 
 const router = express.Router();
+
+// Rate limiter: 10 requests/minute, 5 requests/10 seconds burst
+const rateLimiter = createRateLimiter(
+  60 * 1000, // 1 minute window
+  10, // 10 requests per minute
+  10 * 1000, // 10 second burst window
+  5, // 5 requests per burst window
+);
+
+// Apply rate limiter to all routes
+router.use(rateLimiter);
 
 // User interface
 type User = {
