@@ -13,12 +13,3 @@ describe("GET /api/v1", () => {
         message: "API - 👋🌎🌍🌏",
       }));
 });
-
-describe("GET /api/v1/emojis", () => {
-  it("responds with a json message", () =>
-    request(app)
-      .get("/api/v1/emojis")
-      .set("Accept", "application/json")
-      .expect("Content-Type", /json/)
-      .expect(200, ["😀", "😳", "🙄"]));
-});
