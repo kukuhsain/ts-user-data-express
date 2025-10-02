@@ -93,19 +93,19 @@ The API will start on `http://localhost:3000` by default.
 
 ### Base URL
 ```
-http://localhost:3000/api/v1
+http://localhost:3000
 ```
 
 ### 1. Get User by ID
 Retrieve a user's information with intelligent caching.
 
 ```bash
-GET /api/v1/users/:id
+GET /users/:id
 ```
 
 **Example:**
 ```bash
-curl http://localhost:3000/api/v1/users/1
+curl http://localhost:3000/users/1
 ```
 
 **Success Response (200):**
@@ -136,12 +136,12 @@ X-RateLimit-Burst-Remaining: 3
 View detailed cache performance metrics.
 
 ```bash
-GET /api/v1/users/cache/stats
+GET /users/cache/stats
 ```
 
 **Example:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache/stats
+curl http://localhost:3000/users/cache/stats
 ```
 
 **Response (200):**
@@ -162,12 +162,12 @@ curl http://localhost:3000/api/v1/users/cache/stats
 View asynchronous queue processing metrics.
 
 ```bash
-GET /api/v1/users/queue/stats
+GET /users/queue/stats
 ```
 
 **Example:**
 ```bash
-curl http://localhost:3000/api/v1/users/queue/stats
+curl http://localhost:3000/users/queue/stats
 ```
 
 **Response (200):**
@@ -188,12 +188,12 @@ curl http://localhost:3000/api/v1/users/queue/stats
 Get a unified view of cache, queue, and performance metrics.
 
 ```bash
-GET /api/v1/users/cache-status
+GET /users/cache-status
 ```
 
 **Example:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache-status
+curl http://localhost:3000/users/cache-status
 ```
 
 **Response (200):**
@@ -229,12 +229,12 @@ curl http://localhost:3000/api/v1/users/cache-status
 Manually clear all cached entries.
 
 ```bash
-DELETE /api/v1/users/cache
+DELETE /users/cache
 ```
 
 **Example:**
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/users/cache
+curl -X DELETE http://localhost:3000/users/cache
 ```
 
 **Response (200):**
@@ -251,34 +251,34 @@ curl -X DELETE http://localhost:3000/api/v1/users/cache
 
 **1. Test user endpoint (first call - cache miss):**
 ```bash
-curl http://localhost:3000/api/v1/users/1
+curl http://localhost:3000/users/1
 # Response time: ~200ms (database call)
 ```
 
 **2. Test cached response (second call - cache hit):**
 ```bash
-curl http://localhost:3000/api/v1/users/1
+curl http://localhost:3000/users/1
 # Response time: ~2-5ms (from cache)
 ```
 
 **3. Check comprehensive status:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache-status | jq
+curl http://localhost:3000/users/cache-status | jq
 ```
 
 **4. View cache statistics:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache/stats | jq
+curl http://localhost:3000/users/cache/stats | jq
 ```
 
 **5. View queue statistics:**
 ```bash
-curl http://localhost:3000/api/v1/users/queue/stats | jq
+curl http://localhost:3000/users/queue/stats | jq
 ```
 
 **6. Clear cache:**
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/users/cache | jq
+curl -X DELETE http://localhost:3000/users/cache | jq
 ```
 
 ---
@@ -290,7 +290,7 @@ curl -X DELETE http://localhost:3000/api/v1/users/cache | jq
 # Send 6 rapid requests (burst limit is 5/10s)
 for i in {1..6}; do
   echo "Request $i:"
-  curl -i http://localhost:3000/api/v1/users/1 2>/dev/null | grep -E "HTTP|X-RateLimit"
+  curl -i http://localhost:3000/users/1 2>/dev/null | grep -E "HTTP|X-RateLimit"
   echo ""
 done
 ```
@@ -311,16 +311,16 @@ Retry-After: 10
 **Send 10 simultaneous requests for the same user:**
 ```bash
 # Clear cache first
-curl -X DELETE http://localhost:3000/api/v1/users/cache
+curl -X DELETE http://localhost:3000/users/cache
 
 # Send 10 simultaneous requests
 for i in {1..10}; do
-  curl -s http://localhost:3000/api/v1/users/1 > /dev/null &
+  curl -s http://localhost:3000/users/1 > /dev/null &
 done
 wait
 
 # Check queue stats - should show only 1 database call was made
-curl http://localhost:3000/api/v1/users/queue/stats | jq
+curl http://localhost:3000/users/queue/stats | jq
 ```
 
 ---
@@ -329,13 +329,13 @@ curl http://localhost:3000/api/v1/users/queue/stats | jq
 
 **Invalid user ID:**
 ```bash
-curl http://localhost:3000/api/v1/users/abc
+curl http://localhost:3000/users/abc
 # Response: 400 Bad Request - "Invalid user ID"
 ```
 
 **Non-existent user:**
 ```bash
-curl http://localhost:3000/api/v1/users/999
+curl http://localhost:3000/users/999
 # Response: 404 Not Found - "User not found"
 ```
 
@@ -351,22 +351,22 @@ echo "=== API Test Suite ==="
 
 # 1. Test user endpoint
 echo -e "\n1. Testing User Endpoint..."
-curl -s http://localhost:3000/api/v1/users/1 | jq
+curl -s http://localhost:3000/users/1 | jq
 
 # 2. Check cache status
 echo -e "\n2. Cache Status..."
-curl -s http://localhost:3000/api/v1/users/cache-status | jq
+curl -s http://localhost:3000/users/cache-status | jq
 
 # 3. Test rate limiting
 echo -e "\n3. Testing Rate Limiter..."
 for i in {1..6}; do
   curl -s -w "Request $i: HTTP %{http_code}\n" \
-    http://localhost:3000/api/v1/users/1 -o /dev/null
+    http://localhost:3000/users/1 -o /dev/null
 done
 
 # 4. Clear cache
 echo -e "\n4. Clearing Cache..."
-curl -s -X DELETE http://localhost:3000/api/v1/users/cache | jq
+curl -s -X DELETE http://localhost:3000/users/cache | jq
 
 echo -e "\n=== Tests Complete ==="
 ```
@@ -379,7 +379,7 @@ Run with: `chmod +x test-api.sh && ./test-api.sh`
 
 **Real-time monitoring:**
 ```bash
-watch -n 1 'curl -s http://localhost:3000/api/v1/users/cache-status | jq "{hitRate: .cache.hitRate, avgTime: .performance.averageResponseTime}"'
+watch -n 1 'curl -s http://localhost:3000/users/cache-status | jq "{hitRate: .cache.hitRate, avgTime: .performance.averageResponseTime}"'
 ```
 
 ## 💾 How Cache Works
@@ -461,17 +461,17 @@ The application uses a custom **LRU (Least Recently Used) Cache** implementation
 
 **View cache statistics:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache/stats
+curl http://localhost:3000/users/cache/stats
 ```
 
 **Clear cache manually:**
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/users/cache
+curl -X DELETE http://localhost:3000/users/cache
 ```
 
 **Monitor cache performance:**
 ```bash
-curl http://localhost:3000/api/v1/users/cache-status | jq '.cache'
+curl http://localhost:3000/users/cache-status | jq '.cache'
 ```
 
 ## 🚦 How Rate Limiting Works
