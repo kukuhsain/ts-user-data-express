@@ -38,6 +38,29 @@ const mockUsers: Record<number, User> = {
 // LRU Cache with 100 capacity and 60 second TTL
 const userCache = new LRUCache<User>(100, 60);
 
+// Response time tracking
+const responseTimeTracker = {
+  times: [] as number[],
+  maxSamples: 100, // Keep last 100 response times
+  
+  record(time: number) {
+    this.times.push(time);
+    if (this.times.length > this.maxSamples) {
+      this.times.shift();
+    }
+  },
+  
+  getAverage(): number {
+    if (this.times.length === 0) return 0;
+    const sum = this.times.reduce((a, b) => a + b, 0);
+    return Math.round(sum / this.times.length);
+  },
+  
+  reset() {
+    this.times = [];
+  }
+};
+
 // Async Queue with 5 concurrent requests and deduplication
 const databaseQueue = createQueue<User | null>({
   concurrency: 5,
@@ -68,8 +91,52 @@ router.get<object, QueueStats>("/queue/stats", (req, res) => {
   res.json(stats);
 });
 
+// DELETE /users/cache - Clear the entire cache
+router.delete("/cache", (req, res) => {
+  userCache.clear();
+  responseTimeTracker.reset();
+  res.json({
+    message: "Cache cleared successfully",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// GET /users/cache-status - Get comprehensive cache status
+router.get("/cache-status", (req, res) => {
+  const cacheStats = userCache.getStats();
+  const queueStats = databaseQueue.getStats();
+  
+  res.json({
+    cache: {
+      size: cacheStats.size,
+      capacity: cacheStats.capacity,
+      hits: cacheStats.hits,
+      misses: cacheStats.misses,
+      evictions: cacheStats.evictions,
+      expirations: cacheStats.expirations,
+      hitRate: cacheStats.hits + cacheStats.misses > 0 
+        ? ((cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100).toFixed(2) + "%"
+        : "0%"
+    },
+    performance: {
+      averageResponseTime: responseTimeTracker.getAverage(),
+      unit: "ms"
+    },
+    queue: {
+      pending: queueStats.pending,
+      processing: queueStats.processing,
+      completed: queueStats.completed,
+      failed: queueStats.failed,
+      averageProcessingTime: queueStats.averageProcessingTime
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // GET /users/:id - Retrieve user data by ID
 router.get<{ id: string }, User | ErrorResponse>("/:id", async (req, res) => {
+  const startTime = Date.now();
+  
   const userId = Number.parseInt(req.params.id, 10);
 
   // Validate that the ID is a valid number
@@ -85,6 +152,8 @@ router.get<{ id: string }, User | ErrorResponse>("/:id", async (req, res) => {
   // Check if data is in cache
   const cachedUser = userCache.get(cacheKey);
   if (cachedUser) {
+    const responseTime = Date.now() - startTime;
+    responseTimeTracker.record(responseTime);
     res.json(cachedUser);
     return;
   }
@@ -97,6 +166,8 @@ router.get<{ id: string }, User | ErrorResponse>("/:id", async (req, res) => {
   );
 
   if (!user) {
+    const responseTime = Date.now() - startTime;
+    responseTimeTracker.record(responseTime);
     res.status(404).json({
       message: `User with ID ${userId} not found.`,
     });
@@ -106,6 +177,8 @@ router.get<{ id: string }, User | ErrorResponse>("/:id", async (req, res) => {
   // Store in cache
   userCache.set(cacheKey, user);
 
+  const responseTime = Date.now() - startTime;
+  responseTimeTracker.record(responseTime);
   res.json(user);
 });
 
