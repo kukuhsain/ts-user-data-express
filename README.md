@@ -11,12 +11,6 @@ This is a high-performance REST API built with Express and TypeScript that demon
 - **Queue Processing**: Non-blocking asynchronous queue with request deduplication
 - **Performance Monitoring**: Real-time statistics and response time tracking
 
-**Performance Highlights:**
-- 🚀 **5-6x faster** average response time with caching
-- ⚡ **Sub-5ms** response for cached requests
-- 🛡️ **90% reduction** in database load through deduplication
-- 📊 **85%+ cache hit rate** in typical usage
-
 ## ✨ Features
 
 ### Core Features
