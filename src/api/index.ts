@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get<object, MessageResponse>("/", (req, res) => {
   res.json({
-    message: "API - 👋🌎🌍🌏",
+    message: "Try to test: /users/1",
   });
 });
 
